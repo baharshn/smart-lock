@@ -40,7 +40,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
 /**
  * GET /api/commands
- * Geçmiş komutları listeler
+ * Geçmiş komutları listele
  * Hem admin hem super_admin görebilir
  * acknowledge edilmiş ve edilmemiş tüm komutlar listelenir
  */

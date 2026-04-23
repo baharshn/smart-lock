@@ -5,7 +5,7 @@ const { authenticateAdmin } = require('../middleware/auth');
 /**
  * GET /api/alarms
  * Alarm listesini getirir
- * Zeynep'in alarm sayfası ve İzzet'in alarmlar sekmesi bu endpoint'i kullanır
+ * we ve mobilde alarm sayfaları bu endpoint'i kullanacak
  * Hem admin hem super_admin görebilir
  *
  * Query parametreleri:
@@ -14,7 +14,6 @@ const { authenticateAdmin } = require('../middleware/auth');
 router.get('/', authenticateAdmin, async (req, res) => {
     const { resolved } = req.query;
 
-    // Temel sorguyu oluştur
     // İlgili access_log kaydını da çek, hangi girişten tetiklendiği görünsün
     let query = supabase
         .from('alarms')
@@ -47,7 +46,7 @@ router.get('/', authenticateAdmin, async (req, res) => {
 /**
  * PATCH /api/alarms/:id/resolve
  * Alarmı çözüldü olarak işaretler
- * Zeynep veya İzzet "Çözüldü" butonuna basınca bu endpoint çağrılır
+ * web veya mobilde çözüldü butonauna basılınca bu endpoint
  * Hem admin hem super_admin çözebilir
  */
 router.patch('/:id/resolve', authenticateAdmin, async (req, res) => {

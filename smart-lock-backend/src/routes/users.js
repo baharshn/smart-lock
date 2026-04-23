@@ -6,7 +6,7 @@ const { authenticateAdmin, authenticateSuperAdmin } = require('../middleware/aut
 /**
  * GET /api/users
  * Tüm aktif kullanıcıları listeler
- * Zeynep'in kullanıcı yönetimi sayfası bu endpoint'i kullanır
+ * kullancı yönetimi sayfası bu endpointi kullanacak
  * Hem admin hem super_admin görebilir
  */
 router.get('/', authenticateAdmin, async (req, res) => {
@@ -107,8 +107,8 @@ router.post('/create-admin', authenticateSuperAdmin, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     // Geçici şifreyi response'da döndür
-    // Web paneli bunu ekranda gösterir
-    // Bu şifre bir daha gösterilmeyecek, super_admin not almalı
+    // Web paneli bunu ekranda gösterecek
+    // Bu şifre bir daha gösterilmeyecek, super_admin not almalı(burası değiştirlebilir biraz garip oldu)
     res.status(201).json({
         user,
         temporary_password: temporaryPassword,
@@ -139,7 +139,7 @@ router.patch('/:id', authenticateAdmin, async (req, res) => {
     if (phone) updates.phone = phone;
     if (role) updates.role = role;
 
-    // Hiçbir alan gönderilmemişse hata dön
+
     if (Object.keys(updates).length === 0)
         return res.status(400).json({ error: 'Güncellenecek alan gerekli' });
 

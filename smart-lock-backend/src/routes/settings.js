@@ -5,7 +5,6 @@ const { authenticateAdmin, authenticateSuperAdmin } = require('../middleware/aut
 /**
  * GET /api/settings
  * Tüm sistem ayarlarını getirir
- * Zeynep'in ayarlar sayfası bu endpoint'i kullanır
  * Hem admin hem super_admin görebilir
  *
  * Dönen ayarlar:
@@ -22,9 +21,6 @@ router.get('/', authenticateAdmin, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     // Ayarları key-value objesi olarak döndür
-    // [{ key: 'lockout_threshold', value: '5' }] yerine
-    // { lockout_threshold: '5' } formatında döndür
-    // Zeynep ve İzzet için kullanımı daha kolay
     const settings = {};
     data.forEach(setting => {
         settings[setting.key] = setting.value;
@@ -38,9 +34,7 @@ router.get('/', authenticateAdmin, async (req, res) => {
  * Sistem ayarlarını günceller
  * Sadece super_admin yapabilir
  * Firmware bir sonraki polling'de güncel ayarları alır
- *
- * Body örneği:
- * { "lockout_threshold": "3", "unlock_duration_seconds": "10" }
+
  */
 router.patch('/', authenticateSuperAdmin, async (req, res) => {
     const allowedKeys = ['lockout_threshold', 'unlock_duration_seconds', 'alarm_enabled'];
