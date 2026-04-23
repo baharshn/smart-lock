@@ -12,7 +12,6 @@ const { authenticateDevice } = require('../middleware/auth');
 router.post('/access-event', authenticateDevice, async (req, res) => {
     const { fingerprint_slot, success, consecutive_failure_count } = req.body;
 
-    // Gerekli alanlar gönderilmiş mi kontrol et
     if (fingerprint_slot === undefined || success === undefined)
         return res.status(400).json({ error: 'fingerprint_slot ve success gerekli' });
 
@@ -25,11 +24,11 @@ router.post('/access-event', authenticateDevice, async (req, res) => {
         .eq('is_active', true)
         .single();
 
-    // Erişim olayını veritabanına kaydet
+    // Erişimin veritabanına kayıt
     const { data: log, error } = await supabase
         .from('access_logs')
         .insert({
-            user_id: user?.id || null,        // Kullanıcı bulunamadıysa null
+            user_id: user?.id || null,
             fingerprint_slot_raw: fingerprint_slot,
             success,
             consecutive_failure_count: consecutive_failure_count || 0
@@ -40,7 +39,6 @@ router.post('/access-event', authenticateDevice, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     // WebSocket ile web paneline anlık bildirim gönder
-    // Zeynep'in dashboard tablosu otomatik güncellenir
     req.app.get('io')?.emit('new_access_event', log);
 
     res.json({ log_id: log.id });
@@ -50,7 +48,7 @@ router.post('/access-event', authenticateDevice, async (req, res) => {
  * POST /api/device/alarm
  * 5 üst üste başarısız girişte firmware bu endpoint'i çağırır
  * alarms tablosuna kayıt düşer
- * FCM ile İzzet'in telefonuna push notification gönderilir
+ * FCM ile mobile push notification gönderilir
  */
 router.post('/alarm', authenticateDevice, async (req, res) => {
     const { alarm_type, access_log_id } = req.body;
@@ -71,10 +69,9 @@ router.post('/alarm', authenticateDevice, async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
-    // FCM ile mobil uygulamaya push notification gönder
-    // fcm.js servisi henüz yazılmadığı için şimdilik yorum satırı
-    // const { sendAlarmNotification } = require('../services/fcm');
-    // await sendAlarmNotification(alarm_type, alarm.id);
+    //mobil bildirimi içiçn null fcm düzgün doldurulunca değişecek
+    const { sendPushNotification } = require('../services/fcm');
+    await sendPushNotification(null, 'Alarm!', `${alarm_type} tespit edildi`);
 
     // WebSocket ile web paneline anlık bildirim gönder
     req.app.get('io')?.emit('new_alarm', alarm);

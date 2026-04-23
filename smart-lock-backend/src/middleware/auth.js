@@ -3,8 +3,7 @@ const jwt = require('jsonwebtoken');
 
 /**
  * JWT token doğrulama - admin ve super_admin için
- * web paneli ve mobil uygulaması her istekte
- * Authorization header'ında Bearer token gönderir
+ * web paneli ve mobil uygulaması her istekte Authorization header'ında Bearer token gönderir
  * Bu middleware token'ın geçerli olup olmadığını ve
  * kullanıcının admin veya super_admin rolünde olup olmadığını kontrol eder
  */

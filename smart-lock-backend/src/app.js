@@ -55,7 +55,6 @@ io.on('connection', (socket) => {
 });
 
 // Test endpoint
-// Sunucunun ayakta olup olmadığını kontrol etmek için
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'Smart Lock Backend çalışıyor' });
 });

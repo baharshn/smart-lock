@@ -19,8 +19,7 @@ const { authenticateAdmin } = require('../middleware/auth');
 router.get('/', authenticateAdmin, async (req, res) => {
     const { success, user_id, start_date, end_date, limit } = req.query;
 
-    // Temel sorguyu oluştur
-    // users tablosundan display_name de çek, logda kimin girdiği görünsün
+    // users tablosundan display_name çekilir logda kimin girdiği de görünsün diye
     let query = supabase
         .from('access_logs')
         .select(`
@@ -63,7 +62,7 @@ router.get('/', authenticateAdmin, async (req, res) => {
 /**
  * GET /api/logs/export
  * Logları CSV formatında indirir
- * Zeynep'in log export butonu bu endpoint'i kullanır
+ * logları dosya olarak indirmek istersek diye koydum
  * Aynı filtreler burada da geçerli
  * Hem admin hem super_admin export edebilir
  */
@@ -96,13 +95,11 @@ router.get('/export', authenticateAdmin, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     // CSV formatına çevir
-    // İlk satır başlıklar, sonraki satırlar veriler
     const csvRows = [];
 
-    // Başlık satırı
     csvRows.push(['Tarih', 'Kullanıcı', 'Başarılı', 'Başarısız Deneme Sayısı', 'Kapı'].join(','));
 
-    // Veri satırları
+    // Veri
     data.forEach(log => {
         csvRows.push([
             new Date(log.created_at).toLocaleString('tr-TR'),
