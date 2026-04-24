@@ -1,4 +1,6 @@
 require('dotenv').config();
+const swaggerUi = require('swagger-ui-express');
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -27,6 +29,10 @@ const io = new Server(server, {
 // io nesnesini app'e ekle
 // Route dosyaları req.app.get('io') ile erişebilir
 app.set('io', io);
+
+// Swagger
+const swaggerOutput = require('../swagger-output.json');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerOutput));
 
 // Middleware
 app.use(cors());

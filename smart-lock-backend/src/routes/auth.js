@@ -6,6 +6,8 @@ const { authenticateAdmin } = require('../middleware/auth');
 
 require('dotenv').config();
 
+
+
 /**
  * POST /api/auth/login
  * Email ve şifre ile giriş yapma endpoint'i
@@ -68,6 +70,8 @@ router.post('/login', async (req, res) => {
         }
     });
 });
+
+
 
 /**
  * PATCH /api/auth/change-password
