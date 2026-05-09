@@ -51,6 +51,23 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
+    const { v4: uuidv4 } = require('uuid');
+    const commandId = uuidv4();
+
+    await supabase
+        .from('pending_commands')
+        .insert({
+            id: commandId,
+            command_type: 'switch_enrollment',
+            payload: { user_id: user.id, display_name: user.display_name },
+            acknowledged: false
+        });
+
+    req.app.get('io')?.emit('Command', {
+        id: commandId,
+        action: 'switch_enrollment',
+        user_id: user.id
+    });
     res.status(201).json({ user });
 });
 
