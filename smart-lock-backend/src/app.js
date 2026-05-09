@@ -48,6 +48,13 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/commands', require('./routes/commands'));
 app.use('/api/device', require('./routes/device'));
 
+//websocket cihaz bağlantısı için
+io.use((socket, next) => {
+    const token = socket.handshake.headers['x-device-token'];
+    if (token === process.env.DEVICE_TOKEN) return next();
+    next(new Error('Yetkisiz cihaz'));
+});
+
 /**
  * WebSocket bağlantı olayları
  * web paneli bağlandığında ve ayrıldığında log basılır
