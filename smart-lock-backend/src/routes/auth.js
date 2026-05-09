@@ -47,21 +47,33 @@ router.post('/login', async (req, res) => {
     if (!passwordMatch)
         return res.status(401).json({ error: 'Email veya şifre hatalı' });
 
-    // Geçerli kullanıcı için JWT token üret
-    // Token içinde id, email ve rol bilgisi taşınır
-    // Token 24 saat geçerlidir
-    const token = jwt.sign(
-        {
-            id: user.id,
-            email: user.email,
-            role: user.role
-        },
+    //token üretme işlemi
+    // Access token - 3 saatlik, API isteklerinde kullanılır
+    const accessToken = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: '3h' }
     );
 
+// Refresh token - 7 günlük, sadece yeni accessToken almak için kullanılır
+    const refreshToken = jwt.sign(
+        { id: user.id },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+
+// Refresh token'ı database'e kaydet
+    await supabase
+        .from('users')
+        .update({
+            refresh_token: refreshToken,
+            refresh_token_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        })
+        .eq('id', user.id);
+
     res.json({
-        token,
+        accessToken,
+        refreshToken,
         user: {
             id: user.id,
             email: user.email,
@@ -117,4 +129,46 @@ router.patch('/change-password', authenticateAdmin, async (req, res) => {
     res.json({ message: 'Şifre başarıyla güncellendi' });
 });
 
+
+//refresh işlemi hen accessToken hem refreshToken gelşyor
+router.post('/refresh', async (req, res) => {
+    const { accessToken, refreshToken } = req.body;
+
+    if (!accessToken || !refreshToken)
+        return res.status(400).json({ error: 'accessToken ve refreshToken gerekli' });
+
+
+    let decoded;
+    try {
+        decoded = jwt.verify(accessToken, process.env.JWT_SECRET, { ignoreExpiration: true });
+    } catch {
+        return res.status(401).json({ error: 'Geçersiz access token' });
+    }
+
+    // O kullanıcının database'deki refresh token ile karşılaştır
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', decoded.id)
+        .eq('refresh_token', refreshToken)
+        .eq('is_active', true)
+        .single();
+
+    if (error || !user)
+        return res.status(401).json({ error: 'Geçersiz refresh token' });
+
+    if (user.role === 'user')
+        return res.status(403).json({ error: 'Erişim yetkiniz yok' });
+
+    if (new Date() > new Date(user.refresh_token_expires_at))
+        return res.status(401).json({ error: 'Refresh token süresi dolmuş, tekrar giriş yapın' });
+
+    const newAccessToken = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '3h' }
+    );
+
+    res.json({ accessToken: newAccessToken });
+});
 module.exports = router;
