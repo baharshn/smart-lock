@@ -34,7 +34,11 @@ router.post('/', authenticateAdmin, async (req, res) => {
         .single();
 
     if (error) return res.status(500).json({ error: error.message });
-
+    // WebSocket ile cihaza gönder
+    req.app.get('io')?.emit('Command', {
+        id: command.id,
+        action: command_type === 'unlock' ? 'unlock_door' : 'lock_door'
+    });
     res.json({ command });
 });
 
