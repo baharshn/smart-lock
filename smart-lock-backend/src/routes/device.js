@@ -105,18 +105,22 @@ router.get('/pending-command', authenticateDevice, async (req, res) => {
  * Böylece aynı komut tekrar çalıştırılmaz
  */
 router.patch('/pending-command/:id/acknowledge', authenticateDevice, async (req, res) => {
-    const { error } = await supabase
+    const { data: updatedCommands, error } = await supabase
         .from('pending_commands')
         .update({
             acknowledged: true,
             acknowledged_at: new Date().toISOString()
         })
-        .eq('id', req.params.id);
+        .eq('id', req.params.id)
+        .select();
 
     if (error) return res.status(500).json({ error: error.message });
 
-    req.app.get('io')?.emit('command_acknowledged', { command_id: req.params.id,
-        command_type: command?.command_type});
+    const command = updatedCommands[0];
+    req.app.get('io')?.emit('command_acknowledged', {
+        command_id: req.params.id,
+        command_type: command?.command_type
+    });
 
     res.json({ ok: true });
 });
