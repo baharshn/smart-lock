@@ -115,6 +115,8 @@ router.patch('/pending-command/:id/acknowledge', authenticateDevice, async (req,
 
     if (error) return res.status(500).json({ error: error.message });
 
+    req.app.get('io')?.emit('command_acknowledged', { command_id: req.params.id });
+
     res.json({ ok: true });
 });
 
