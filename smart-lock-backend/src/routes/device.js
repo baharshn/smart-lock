@@ -4,6 +4,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const router = require('express').Router();
 const supabase = require('../db/supabase');
 const { authenticateDevice } = require('../middleware/auth');
+const { sendAlarmEmail } = require('../services/email');
 
 /**
  * POST /api/device/access-event
@@ -88,8 +89,11 @@ router.post('/alarm', authenticateDevice, async (req, res) => {
             await sendPushNotification(admin.fcm_token, 'Alarm!', `${alarm_type} tespit edildi`);
         }
     }
+    //mail olarak bildirim göndermek için
+    await sendAlarmEmail(alarm_type, new Date().toISOString());
     // WebSocket ile web paneline anlık bildirim gönder
     req.app.get('io')?.emit('new_alarm', alarm);
+
 
     res.json({ alarm_id: alarm.id });
 });
