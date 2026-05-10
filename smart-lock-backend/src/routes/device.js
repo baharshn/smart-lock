@@ -44,6 +44,23 @@ router.post('/access-event', authenticateDevice, async (req, res) => {
     // WebSocket ile web paneline anlık bildirim gönder
     req.app.get('io')?.emit('new_access_event', log);
 
+    // Başarısız girişte admin/super_admin'lere bildirim gönder
+    if (!success) {
+        const { sendPushNotification } = require('../services/fcm');
+        const { data: admins } = await supabase
+            .from('users')
+            .select('fcm_token')
+            .in('role', ['admin', 'super_admin'])
+            .eq('is_active', true)
+            .not('fcm_token', 'is', null);
+
+        if (admins && admins.length > 0) {
+            for (const adminUser of admins) {
+                await sendPushNotification(adminUser.fcm_token, 'Başarısız Giriş!', 'Kapıya yetkisiz giriş denemesi yapıldı');
+            }
+        }
+    }
+
     res.json({ log_id: log.id });
 });
 

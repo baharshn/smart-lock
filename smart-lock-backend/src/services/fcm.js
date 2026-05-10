@@ -19,7 +19,11 @@ const sendPushNotification = async (fcm_token, title, body) => {
             notification: {
                 title,
                 body
+            },
+            android: {
+                priority: 'high'
             }
+
         });
         console.log(`[FCM] Bildirim gönderildi → ${title}: ${body}`);
     } catch (error) {
