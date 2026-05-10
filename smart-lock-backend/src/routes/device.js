@@ -72,10 +72,21 @@ router.post('/alarm', authenticateDevice, async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
-    //mobil bildirimi içiçn null fcm düzgün doldurulunca değişecek
     const { sendPushNotification } = require('../services/fcm');
-    await sendPushNotification(null, 'Alarm!', `${alarm_type} tespit edildi`);
 
+// admin ve super_admin rolündeki tüm kullanıcılara bildirim gönder
+    const { data: admins } = await supabase
+        .from('users')
+        .select('fcm_token')
+        .in('role', ['admin', 'super_admin'])
+        .eq('is_active', true)
+        .not('fcm_token', 'is', null);
+
+    if (admins && admins.length > 0) {
+        for (const admin of admins) {
+            await sendPushNotification(admin.fcm_token, 'Alarm!', `${alarm_type} tespit edildi`);
+        }
+    }
     // WebSocket ile web paneline anlık bildirim gönder
     req.app.get('io')?.emit('new_alarm', alarm);
 
