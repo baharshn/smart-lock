@@ -1,3 +1,6 @@
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
+const upload = multer({ storage: multer.memoryStorage() });
 const router = require('express').Router();
 const supabase = require('../db/supabase');
 const { authenticateDevice } = require('../middleware/auth');
@@ -181,6 +184,67 @@ router.post('/enroll', authenticateDevice, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     res.json({ user });
+});
+
+
+router.post('/access-event/:logId/photo', authenticateDevice, async (req, res) => {
+    const { logId } = req.params;
+
+    // log kaydı var mı ve başarısız mı kontrol et
+    const { data: log, error: logError } = await supabase
+        .from('access_logs')
+        .select('id, success')
+        .eq('id', logId)
+        .single();
+
+    if (logError || !log) {
+        return res.status(404).json({ error: 'Log kaydı bulunamadı' });
+    }
+
+    if (log.success === true) {
+        return res.status(400).json({ error: 'Başarılı girişlere fotoğraf eklenemez' });
+    }
+
+    // gelen binary veriyi buffer'a topla
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', async () => {
+        try {
+            const buffer = Buffer.concat(chunks);
+            const fileName = `${logId}_${uuidv4()}.jpg`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('access-photos')
+                .upload(fileName, buffer, {
+                    contentType: 'image/jpeg',
+                    upsert: false
+                });
+
+            if (uploadError) {
+                return res.status(500).json({ error: 'Fotoğraf yüklenemedi', detail: uploadError.message });
+            }
+
+            const { data: urlData } = supabase.storage
+                .from('access-photos')
+                .getPublicUrl(fileName);
+
+            const photoUrl = urlData.publicUrl;
+
+            const { error: updateError } = await supabase
+                .from('access_logs')
+                .update({ photo_url: photoUrl })
+                .eq('id', logId);
+
+            if (updateError) {
+                return res.status(500).json({ error: 'Log güncellenemedi', detail: updateError.message });
+            }
+
+            return res.status(201).json({ message: 'Fotoğraf başarıyla yüklendi', photo_url: photoUrl });
+
+        } catch (err) {
+            return res.status(500).json({ error: 'Sunucu hatası', detail: err.message });
+        }
+    });
 });
 
 module.exports = router;
