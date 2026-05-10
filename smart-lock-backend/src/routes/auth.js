@@ -62,13 +62,17 @@ router.post('/login', async (req, res) => {
         { expiresIn: '7d' }
     );
 
-// Refresh token'ı database'e kaydet
+    // Refresh token ve varsa fcm_token'ı database'e kaydet
+    const { fcm_token } = req.body;
+    const updateData = {
+        refresh_token: refreshToken,
+        refresh_token_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    };
+    if (fcm_token) updateData.fcm_token = fcm_token;
+
     await supabase
         .from('users')
-        .update({
-            refresh_token: refreshToken,
-            refresh_token_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        })
+        .update(updateData)
         .eq('id', user.id);
 
     res.json({
