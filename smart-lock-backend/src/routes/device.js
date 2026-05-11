@@ -57,12 +57,8 @@ router.post('/access-event', authenticateDevice, async (req, res) => {
  */
 router.post('/alarm', authenticateDevice, async (req, res) => {
     const { alarm_type, access_log_id } = req.body;
-
-    // alarm_type zorunlu: 'lockout' veya 'forced_entry'
     if (!alarm_type)
         return res.status(400).json({ error: 'alarm_type gerekli' });
-
-    // Alarmı veritabanına kaydet
     const { data: alarm, error } = await supabase
         .from('alarms')
         .insert({
@@ -71,33 +67,39 @@ router.post('/alarm', authenticateDevice, async (req, res) => {
         })
         .select()
         .single();
-
     if (error) return res.status(500).json({ error: error.message });
-
-    const { sendPushNotification } = require('../services/fcm');
-
-// admin ve super_admin rolündeki tüm kullanıcılara bildirim gönder
-    const { data: admins } = await supabase
-        .from('users')
-        .select('fcm_token')
-        .in('role', ['admin', 'super_admin'])
-        .eq('is_active', true)
-        .not('fcm_token', 'is', null);
-
-    if (admins && admins.length > 0) {
-        for (const admin of admins) {
-            await sendPushNotification(admin.fcm_token, 'Alarm!', `${alarm_type} tespit edildi`);
-        }
-    }
-    //mail olarak bildirim göndermek için
-    await sendAlarmEmail(alarm_type, new Date().toISOString());
-    // WebSocket ile web paneline anlık bildirim gönder
+    // --- OPTIMIZATION START ---
+    
+    // 1. WebSocket notification (Immediate)
     req.app.get('io')?.emit('new_alarm', alarm);
-
-
+    // 2. Background Tasks (No 'await' so we don't block the response)
+    const runBackgroundTasks = async () => {
+        try {
+            const { sendPushNotification } = require('../services/fcm');
+            const { data: admins } = await supabase
+                .from('users')
+                .select('fcm_token')
+                .in('role', ['admin', 'super_admin'])
+                .eq('is_active', true)
+                .not('fcm_token', 'is', null);
+            if (admins && admins.length > 0) {
+                // Send all push notifications in parallel
+                await Promise.allSettled(
+                    admins.map(admin => sendPushNotification(admin.fcm_token, 'Alarm!', `${alarm_type} tespit edildi`))
+                );
+            }
+            // Send Email in background
+            await sendAlarmEmail(alarm_type, new Date().toISOString());
+        } catch (err) {
+            console.error('Background notification error:', err);
+        }
+    };
+    // Execute background tasks without awaiting
+    runBackgroundTasks();
+    // --- OPTIMIZATION END ---
+    // Send response to firmware immediately
     res.json({ alarm_id: alarm.id });
 });
-
 /**
  * GET /api/device/pending-command
  * Firmware her 3 saniyede bir bu endpoint'i çağırır
